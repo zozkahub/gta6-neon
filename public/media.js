@@ -1,0 +1,1 @@
+window.MEDIA_LIBRARY = [];
