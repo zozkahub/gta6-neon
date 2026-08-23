@@ -1,0 +1,24 @@
+/* Cursor + scroll-layer correction */
+@media (pointer:fine){
+  html, body, body * { cursor: none !important; }
+  .cursor-glow, .cursor-dot {
+    left: 0 !important;
+    top: 0 !important;
+    transform: translate3d(-50%, -50%, 0) !important;
+    will-change: left, top, opacity;
+  }
+}
+
+/* Decorative ambient lights belong to the hero/document flow, not the viewport. */
+.orbs{
+  position:absolute !important;
+  inset:0 auto auto 0 !important;
+  width:100% !important;
+  height:100vh !important;
+}
+
+/* Keep the fixed HUD clean; background layers should never drift over later sections. */
+.noise,
+.scanlines{
+  pointer-events:none !important;
+}
