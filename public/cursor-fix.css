@@ -1,15 +1,21 @@
-/* Cursor + scroll-layer correction */
+/* Stable pointer rendering: one shared coordinate source for dot + glow. */
 @media (pointer:fine){
   html, body, body * { cursor: none !important; }
-  .cursor-glow, .cursor-dot {
-    left: 0 !important;
-    top: 0 !important;
+  .cursor-glow,
+  .cursor-dot {
+    position: fixed !important;
+    left: var(--cursor-x, -100px) !important;
+    top: var(--cursor-y, -100px) !important;
     transform: translate3d(-50%, -50%, 0) !important;
+    pointer-events: none !important;
     will-change: left, top, opacity;
+    opacity: 0;
   }
+  .cursor-glow.cursor-visible,
+  .cursor-dot.cursor-visible { opacity: 1; }
 }
 
-/* Decorative ambient lights belong to the hero/document flow, not the viewport. */
+/* Decorative ambient lights belong to the page/hero, never the viewport. */
 .orbs{
   position:absolute !important;
   inset:0 auto auto 0 !important;
@@ -17,7 +23,6 @@
   height:100vh !important;
 }
 
-/* Keep the fixed HUD clean; background layers should never drift over later sections. */
 .noise,
 .scanlines{
   pointer-events:none !important;
