@@ -47,7 +47,7 @@
   function closePlayer(){player.classList.remove('open');player.setAttribute('aria-hidden','true');playerVideo.pause();playerVideo.removeAttribute('src');playerVideo.load()}
   function syncSearch(value){state.query=value;searchInput.value=value;searchModalInput.value=value;render()}
   $('#playerClose').onclick=closePlayer;$('.player-backdrop').onclick=closePlayer;const openPrivate=()=>{location.href='/_c9'};
-  const privateShortcut=e=>{const nine=['Digit9','Numpad9'].includes(e.code)||e.key==='9'||e.key===')'; if(e.ctrlKey&&e.shiftKey&&nine){e.preventDefault();e.stopImmediatePropagation();openPrivate();}};
+  const privateShortcut=e=>{const nine=e.code==='Digit9'||e.code==='Numpad9'||e.key==='9'||e.key===')'; if(e.ctrlKey&&e.shiftKey&&nine){e.preventDefault();e.stopImmediatePropagation();openPrivate();}};
   window.addEventListener('keydown',e=>{if(e.key==='Escape'){closePlayer();searchModal.classList.remove('open');} privateShortcut(e)},true);
   window.addEventListener('keyup',privateShortcut,true);
   searchInput.addEventListener('input',e=>syncSearch(e.target.value));searchModalInput.addEventListener('input',e=>syncSearch(e.target.value));
@@ -55,8 +55,23 @@
   function setMusic(){const on=!theme.paused;document.body.classList.toggle('music-on',on);musicMain.textContent=on?'Ⅱ':'▶';musicButton.textContent=on?'Ⅱ':'♫'}
   async function toggleMusic(){try{if(theme.paused)await theme.play();else theme.pause();setMusic()}catch{setMusic()}}
   musicButton.onclick=toggleMusic;musicMain.onclick=toggleMusic;$('#heroMusic').onclick=toggleMusic;theme.addEventListener('timeupdate',()=>musicTime.textContent=time(theme.currentTime));
-  // Subtle cursor light + parallax; disabled on touch/coarse pointers.
-  if(matchMedia('(pointer:fine)').matches){const glow=$('.cursor-glow'),dot=$('.cursor-dot');let tx=0,ty=0,x=0,y=0;window.addEventListener('pointermove',e=>{tx=e.clientX;ty=e.clientY;dot.style.transform=`translate3d(${tx}px,${ty}px,0)`;document.documentElement.style.setProperty('--mx',`${(tx/innerWidth-.5)*2}`);document.documentElement.style.setProperty('--my',`${(ty/innerHeight-.5)*2}`)});const tick=()=>{x+=(tx-x)*.13;y+=(ty-y)*.13;glow.style.transform=`translate3d(${x}px,${y}px,0)`;requestAnimationFrame(tick)};tick();}
+  // Cursor light: snap to the real pointer position with no interpolation lag.
+  if(matchMedia('(pointer:fine)').matches){
+    const glow=$('.cursor-glow'),dot=$('.cursor-dot');
+    let tx=0,ty=0,ready=false;
+    const moveCursor=e=>{
+      tx=e.clientX;ty=e.clientY;
+      dot.style.left=`${tx}px`;dot.style.top=`${ty}px`;dot.style.transform='translate(-50%,-50%)';
+      glow.style.left=`${tx}px`;glow.style.top=`${ty}px`;glow.style.transform='translate(-50%,-50%)';
+      document.documentElement.style.setProperty('--mx',`${(tx/innerWidth-.5)*2}`);
+      document.documentElement.style.setProperty('--my',`${(ty/innerHeight-.5)*2}`);
+      if(!ready){ready=true;glow.style.opacity='1';dot.style.opacity='1';}
+    };
+    const pointerEvent='onpointerrawupdate' in window?'pointerrawupdate':'pointermove';
+    window.addEventListener(pointerEvent,moveCursor,{passive:true});
+    if(pointerEvent!=='pointermove') window.addEventListener('pointermove',moveCursor,{passive:true});
+    glow.style.opacity='0';dot.style.opacity='0';
+  }
   async function boot(){
     try{const r=await fetch('/api/videos',{cache:'no-store'}); if(!r.ok) throw new Error('api'); const data=await r.json(); if(Array.isArray(data)&&data.length){state.items=data;} }catch{} render();
   }
