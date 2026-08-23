@@ -55,22 +55,25 @@
   function setMusic(){const on=!theme.paused;document.body.classList.toggle('music-on',on);musicMain.textContent=on?'Ⅱ':'▶';musicButton.textContent=on?'Ⅱ':'♫'}
   async function toggleMusic(){try{if(theme.paused)await theme.play();else theme.pause();setMusic()}catch{setMusic()}}
   musicButton.onclick=toggleMusic;musicMain.onclick=toggleMusic;$('#heroMusic').onclick=toggleMusic;theme.addEventListener('timeupdate',()=>musicTime.textContent=time(theme.currentTime));
-  // Cursor light: snap to the real pointer position with no interpolation lag.
+  // Cursor light: both elements are driven by the same viewport CSS variables, so they cannot drift apart.
   if(matchMedia('(pointer:fine)').matches){
+    const root=document.documentElement;
     const glow=$('.cursor-glow'),dot=$('.cursor-dot');
-    let tx=0,ty=0,ready=false;
     const moveCursor=e=>{
-      tx=e.clientX;ty=e.clientY;
-      dot.style.left=`${tx}px`;dot.style.top=`${ty}px`;dot.style.transform='translate(-50%,-50%)';
-      glow.style.left=`${tx}px`;glow.style.top=`${ty}px`;glow.style.transform='translate(-50%,-50%)';
-      document.documentElement.style.setProperty('--mx',`${(tx/innerWidth-.5)*2}`);
-      document.documentElement.style.setProperty('--my',`${(ty/innerHeight-.5)*2}`);
-      if(!ready){ready=true;glow.style.opacity='1';dot.style.opacity='1';}
+      const x=Math.round(e.clientX), y=Math.round(e.clientY);
+      root.style.setProperty('--cursor-x',`${x}px`);
+      root.style.setProperty('--cursor-y',`${y}px`);
+      root.style.setProperty('--mx',`${(x/innerWidth-.5)*2}`);
+      root.style.setProperty('--my',`${(y/innerHeight-.5)*2}`);
+      glow.classList.add('cursor-visible');
+      dot.classList.add('cursor-visible');
     };
-    const pointerEvent='onpointerrawupdate' in window?'pointerrawupdate':'pointermove';
-    window.addEventListener(pointerEvent,moveCursor,{passive:true});
-    if(pointerEvent!=='pointermove') window.addEventListener('pointermove',moveCursor,{passive:true});
-    glow.style.opacity='0';dot.style.opacity='0';
+    window.addEventListener('pointermove',moveCursor,{passive:true});
+    window.addEventListener('pointerenter',moveCursor,{passive:true});
+    window.addEventListener('pointerleave',()=>{
+      glow.classList.remove('cursor-visible');
+      dot.classList.remove('cursor-visible');
+    },{passive:true});
   }
   async function boot(){
     try{const r=await fetch('/api/videos',{cache:'no-store'}); if(!r.ok) throw new Error('api'); const data=await r.json(); if(Array.isArray(data)&&data.length){state.items=data;} }catch{} render();
