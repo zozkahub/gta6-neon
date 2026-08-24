@@ -22,21 +22,45 @@
     return wrap;
   }
 
+  function showLoadError() {
+    loading.hidden = false;
+    loading.innerHTML = '<span>LIBRARY TEMPORARILY UNAVAILABLE</span><br><button id="retryLibrary" class="load-more" style="margin-top:12px">RETRY</button>';
+    const b = $('#retryLibrary'); if (b) b.addEventListener('click', () => loadPage(true));
+    loadMore.hidden = true;
+  }
+
+  async function fetchLibrary(url, attempt = 0) {
+    try {
+      const r = await fetch(url, { cache:'no-store', headers:{Accept:'application/json'} });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      if (!data || !Array.isArray(data.items)) throw new Error('Invalid library response');
+      return data;
+    } catch (e) {
+      if (attempt < 2) { await new Promise(r => setTimeout(r, 400 * (attempt + 1))); return fetchLibrary(url, attempt + 1); }
+      throw e;
+    }
+  }
+
   async function loadPage(reset = false) {
     if (state.loading || (!state.hasMore && !reset)) return;
     if (reset) { state.page=0; state.hasMore=true; grid.innerHTML=''; empty.classList.add('hidden'); }
-    state.loading=true; loading.hidden=false; loading.textContent='LOADING MEDIA...';
+    state.loading=true; loading.hidden=false; loading.textContent='LOADING LIBRARY...';
     try {
       const next = state.page + 1;
       const url = new URL('/api/videos', location.origin); url.searchParams.set('page', next); url.searchParams.set('limit', state.limit); if (state.query) url.searchParams.set('q', state.query);
-      const r = await fetch(url, { cache:'no-store' }); if (!r.ok) throw new Error('library');
-      const data = await r.json(); state.page=data.page; state.total=data.total; state.hasMore=data.hasMore;
+      const data = await fetchLibrary(url);
+      state.page=data.page; state.total=data.total; state.hasMore=data.hasMore;
       count.textContent=String(data.total).padStart(2,'0'); heroCount.textContent=String(data.total).padStart(2,'0');
       if (!data.items.length && state.page===1) empty.classList.remove('hidden');
       data.items.forEach((v,idx) => grid.appendChild(makeCard(v, idx)));
-      loadMore.hidden = !state.hasMore || !data.items.length; loading.hidden=true;
-    } catch { loading.hidden=false; loading.textContent='LIBRARY REQUEST FAILED'; }
-    finally { state.loading=false; }
+      loading.hidden=true;
+      loadMore.hidden = !state.hasMore || !data.items.length;
+    } catch {
+      showLoadError();
+    } finally {
+      state.loading=false;
+    }
   }
 
   const applySearch = v => { state.query=v.trim(); searchInput.value=v; searchModalInput.value=v; clearTimeout(state.searchTimer); state.searchTimer=setTimeout(()=>loadPage(true),260); };
