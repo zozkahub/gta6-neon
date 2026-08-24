@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#070711">
-<meta name="description" content="A cinematic GTA VI-inspired media library interface.">
+<meta name="description" content="A cinematic media library interface.">
 <title>Grand Theft Auto VI</title>
 <link rel="icon" href="./assets/gta6-logo-neon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,96 +12,46 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500;600&family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./styles.css">
 <link rel="stylesheet" href="./cursor-fix.css">
+<style>
+  .library-tools{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .library-status{font:600 9px 'DM Mono';letter-spacing:.1em;color:#81798b}
+  .load-more{display:inline-flex;min-height:46px;padding:0 18px;align-items:center;justify-content:center;border-radius:14px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.045);color:#fff;font:800 10px 'DM Mono';letter-spacing:.12em;cursor:pointer}
+  .load-more:hover{border-color:rgba(255,77,184,.35);background:rgba(255,77,184,.08)}
+  .card-media{cursor:pointer}
+  .card-video{display:none!important}
+  .media-card .card-actions a{display:none}
+</style>
 </head>
 <body>
-<div class="cursor-glow" aria-hidden="true"></div>
-<div class="cursor-dot" aria-hidden="true"></div>
-<div class="noise" aria-hidden="true"></div>
-<div class="scanlines" aria-hidden="true"></div>
-<div class="bg-grid" aria-hidden="true"></div>
+<div class="cursor-glow" aria-hidden="true"></div><div class="cursor-dot" aria-hidden="true"></div>
+<div class="noise" aria-hidden="true"></div><div class="scanlines" aria-hidden="true"></div><div class="bg-grid" aria-hidden="true"></div>
 <div class="orbs" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
 
 <header class="topbar glass">
   <a class="brand" href="#home" aria-label="Home"><span class="brand-orbit"></span><img src="./assets/gta6-logo-neon.png" alt="Grand Theft Auto VI"></a>
   <nav><a href="#library" class="active">LIBRARY</a></nav>
-  <div class="top-actions">
-    <button class="icon-btn" id="musicButton" aria-label="Play theme" title="Play theme">♫</button>
-    <button class="icon-btn" id="searchButton" aria-label="Search library" title="Search library">⌕</button>
-  </div>
+  <div class="top-actions"><button class="icon-btn" id="musicButton" aria-label="Play theme">♫</button><button class="icon-btn" id="searchButton" aria-label="Search library">⌕</button></div>
 </header>
 
 <main id="home">
-  <section class="hero" aria-label="Featured media library">
-    <div class="hero-bg-wrap">
-      <img src="./assets/hero.jpg" class="hero-bg" alt="Vice City-inspired night scene">
-      <div class="hero-vignette"></div>
-      <div class="hero-glass"></div>
-      <div class="hero-rays"></div>
-      <div class="hero-particles"></div>
-    </div>
-    <div class="hero-ui">
-      <div class="micro left">VICE CITY · FL <span>25.7617° N, 80.1918° W</span></div>
-      <div class="micro right">SYSTEM // ONLINE <span class="status-dot"></span></div>
-    </div>
-    <div class="hero-content">
-      <div class="eyebrow"><span class="line"></span>MEDIA LIBRARY</div>
-      <img class="hero-logo" src="./assets/gta6-logo-neon.png" alt="Grand Theft Auto VI">
-      <div class="hero-title"><span>WATCH</span><span class="dot">·</span><span>FEEL</span><span class="dot">·</span><span>DOWNLOAD</span></div>
-      <p class="hero-copy">A glassy, animated media experience built for cinematic previews, clean cards and direct downloads.</p>
-      <div class="hero-actions">
-        <a href="#library" class="primary-btn">OPEN LIBRARY <span>↘</span></a>
-        <button class="ghost-btn" id="heroMusic">PLAY THEME <span>♫</span></button>
-      </div>
-      <div class="hero-readout"><b id="heroCount">08</b><span>MEDIA ITEMS</span><i></i><b>LIVE</b><span>RAILWAY NODE</span></div>
-    </div>
-    <div class="music-player glass" id="musicPlayer" aria-live="polite">
-      <div class="album"><img src="./assets/hero-side.jpg" alt=""></div>
-      <div class="track"><small>NOW PLAYING</small><strong>GTA VI THEME</strong><span>LOCAL AUDIO // 320K</span></div>
-      <button id="musicMain" class="music-play" aria-label="Toggle music">▶</button>
-      <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-      <time id="musicTime">00:00</time>
-    </div>
-  </section>
+<section class="hero" aria-label="Featured media library">
+  <div class="hero-bg-wrap"><img src="./assets/hero.jpg" class="hero-bg" alt="Vice City-inspired scene"><div class="hero-vignette"></div><div class="hero-glass"></div><div class="hero-rays"></div><div class="hero-particles"></div></div>
+  <div class="hero-ui"><div class="micro left">VICE CITY · FL <span>MEDIA NODE</span></div><div class="micro right">SYSTEM // ONLINE <span class="status-dot"></span></div></div>
+  <div class="hero-content"><div class="eyebrow"><span class="line"></span>MEDIA LIBRARY</div><img class="hero-logo" src="./assets/gta6-logo-neon.png" alt="Grand Theft Auto VI"><div class="hero-title"><span>WATCH</span><span class="dot">·</span><span>FEEL</span><span class="dot">·</span><span>DOWNLOAD</span></div><p class="hero-copy">Fast, focused media browsing with cached thumbnails and dedicated playback pages.</p><div class="hero-actions"><a href="#library" class="primary-btn">OPEN LIBRARY <span>↘</span></a><button class="ghost-btn" id="heroMusic">PLAY THEME <span>♫</span></button></div><div class="hero-readout"><b id="heroCount">00</b><span>MEDIA ITEMS</span><i></i><b>READY</b><span>OPTIMIZED</span></div></div>
+  <div class="music-player glass" id="musicPlayer"><div class="album"><img src="./assets/hero-side.jpg" alt=""></div><div class="track"><small>NOW PLAYING</small><strong>GTA VI THEME</strong><span>LOCAL AUDIO</span></div><button id="musicMain" class="music-play" aria-label="Toggle music">▶</button><div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><time id="musicTime">00:00</time></div>
+</section>
 
-  <section class="library glass-panel" id="library">
-    <div class="library-head">
-      <div>
-        <div class="eyebrow"><span class="line"></span>CURATED FILES</div>
-        <h1>THE <em>LIBRARY</em></h1>
-      </div>
-      <div class="library-controls">
-        <div class="search-box"><span>⌕</span><input id="searchInput" placeholder="SEARCH MEDIA" autocomplete="off"></div>
-        <span class="count"><b id="count">08</b> ITEMS</span>
-      </div>
-    </div>
-    <div class="library-rule"><span></span><i></i><span></span></div>
-    <div id="grid" class="grid"></div>
-    <div id="empty" class="empty hidden"><span>VI</span><h2>NOT FOUND</h2><p>Try another search.</p></div>
-  </section>
+<section class="library glass-panel" id="library">
+  <div class="library-head"><div><div class="eyebrow"><span class="line"></span>CURATED FILES</div><h1>THE <em>LIBRARY</em></h1></div><div class="library-tools"><div class="search-box"><span>⌕</span><input id="searchInput" placeholder="SEARCH MEDIA" autocomplete="off"></div><span class="count"><b id="count">00</b> ITEMS</span></div></div>
+  <div class="library-rule"><span></span><i></i><span></span></div>
+  <div id="grid" class="grid"></div>
+  <div id="loading" class="library-status" style="text-align:center;padding:24px">LOADING LIBRARY...</div>
+  <div style="display:flex;justify-content:center;margin-top:24px"><button id="loadMore" class="load-more" hidden>LOAD MORE</button></div>
+  <div id="empty" class="empty hidden"><span>VI</span><h2>NOT FOUND</h2><p>Try another search.</p></div>
+</section>
 </main>
 
-<div class="search-modal" id="searchModal" aria-hidden="true">
-  <div class="search-card glass">
-    <button id="searchClose" class="close">×</button>
-    <div class="eyebrow"><span class="line"></span>SEARCH</div>
-    <h2>FIND MEDIA</h2>
-    <input id="searchModalInput" placeholder="CAR, PLAN, CITY..." autocomplete="off">
-  </div>
-</div>
-
-<div class="player" id="player" aria-hidden="true">
-  <div class="player-backdrop"></div>
-  <div class="player-window glass">
-    <button id="playerClose" class="close">×</button>
-    <div class="player-head"><div><div class="eyebrow"><span class="line"></span>PLAYBACK</div><h2 id="playerTitle">MEDIA</h2></div><a id="playerDownload" class="primary-btn small" href="#" download>DOWNLOAD ↗</a></div>
-    <div class="player-stage"><video id="playerVideo" playsinline controls preload="metadata"></video></div>
-    <div class="player-foot"><span id="playerMeta">DIRECT MEDIA</span><span id="playerTime">00:00</span></div>
-  </div>
-</div>
-
+<div class="search-modal" id="searchModal" aria-hidden="true"><div class="search-card glass"><button id="searchClose" class="close">×</button><div class="eyebrow"><span class="line"></span>SEARCH</div><h2>FIND MEDIA</h2><input id="searchModalInput" placeholder="CAR, PLAN, CITY..." autocomplete="off"></div></div>
 <audio id="themeAudio" preload="metadata" loop src="./assets/theme.mp3"></audio>
-<script src="./media.js"></script>
-<script src="./app.js"></script>
-<script src="./cursor-hotfix.js"></script>
-</body>
-</html>
+<script src="./media.js"></script><script src="./app.js"></script><script src="./cursor-hotfix.js"></script>
+</body></html>
