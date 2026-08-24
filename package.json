@@ -1,8 +1,8 @@
 {
   "name": "gta6-neon-railway-ready",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "private": true,
-  "description": "Premium neon GTA VI media library with remote streaming and protected media controls.",
+  "description": "Premium neon media library with persistent metadata, batch ingestion, cached thumbnails, and dedicated media pages.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "express": "^5.1.0",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "pg": "^8.16.3"
   },
   "engines": {
     "node": ">=20"
