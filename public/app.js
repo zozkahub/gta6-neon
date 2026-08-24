@@ -1,82 +1,57 @@
 (() => {
-  const state={items:[...window.MEDIA_LIBRARY],query:'',thumbs:new Map()};
-  const $=s=>document.querySelector(s);
-  const grid=$('#grid'), empty=$('#empty'), count=$('#count'), heroCount=$('#heroCount');
-  const player=$('#player'), playerVideo=$('#playerVideo'), playerTitle=$('#playerTitle'), playerMeta=$('#playerMeta'), playerTime=$('#playerTime'), playerDownload=$('#playerDownload');
-  const searchModal=$('#searchModal'), searchInput=$('#searchInput'), searchModalInput=$('#searchModalInput');
-  const theme=$('#themeAudio'), musicMain=$('#musicMain'), musicButton=$('#musicButton'), musicTime=$('#musicTime');
-  const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-  const time=s=>{const n=Math.max(0,Math.round(Number(s)||0));return `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`};
-  const filtered=()=>{const q=state.query.trim().toLowerCase();return state.items.filter(v=>!q||[v.title,v.category,v.subtitle,v.description].join(' ').toLowerCase().includes(q))};
-  function makeFirstSecondThumb(v,img){
-    if(state.thumbs.has(v.id)) return;
-    state.thumbs.set(v.id,'pending');
-    if(v.poster) img.src=v.poster;
-    const probe=document.createElement('video');
-    probe.crossOrigin='anonymous'; probe.muted=true; probe.playsInline=true; probe.preload='auto'; probe.src=v.videoUrl;
-    let settled=false;
-    const done=ok=>{ if(settled)return; settled=true; try{probe.pause();probe.removeAttribute('src');probe.load();}catch{} if(!ok) state.thumbs.delete(v.id); };
-    const capture=()=>{ try{
-      const w=probe.videoWidth||1280,h=probe.videoHeight||720,scale=Math.min(1,1280/w);
-      const c=document.createElement('canvas');c.width=Math.max(2,Math.round(w*scale));c.height=Math.max(2,Math.round(h*scale));
-      c.getContext('2d').drawImage(probe,0,0,c.width,c.height); const url=c.toDataURL('image/jpeg',.9);
-      state.thumbs.set(v.id,url);img.src=url;img.dataset.exact='1.000s';done(true);
-    }catch{done(false)} };
-    const target = Number.isFinite(probe.duration) && probe.duration > 1 ? 1 : Math.max(0.05, (probe.duration || 0.5) - 0.05);
-    const seekToTarget=()=>{try{probe.currentTime=target}catch{}};
-    probe.addEventListener('loadedmetadata',seekToTarget,{once:true});
-    probe.addEventListener('loadeddata',seekToTarget,{once:true});
-    probe.addEventListener('seeked',()=>setTimeout(capture,35),{once:true});
-    probe.addEventListener('error',()=>done(false),{once:true});
-    probe.load();
-    setTimeout(()=>done(false),15000);
+  const state = { page: 0, limit: 12, total: 0, hasMore: true, loading: false, query: '', searchTimer: null };
+  const $ = s => document.querySelector(s);
+  const grid = $('#grid'), empty = $('#empty'), loading = $('#loading'), loadMore = $('#loadMore');
+  const count = $('#count'), heroCount = $('#heroCount');
+  const searchInput = $('#searchInput'), searchModal = $('#searchModal'), searchModalInput = $('#searchModalInput');
+  const theme = $('#themeAudio'), musicMain = $('#musicMain'), musicButton = $('#musicButton'), musicTime = $('#musicTime');
+  const esc = s => String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const time = s => { const n=Math.max(0,Math.round(Number(s)||0)); return `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`; };
+
+  function makeCard(v, i) {
+    const wrap = document.createElement('article');
+    wrap.className = 'media-card'; wrap.dataset.id = v.id; wrap.style.setProperty('--i', i);
+    wrap.innerHTML = `<div class="card-media" role="link" tabindex="0" aria-label="Open ${esc(v.title)}"><img class="poster" src="${esc(v.poster || './assets/hero-side.jpg')}" alt="" loading="lazy" decoding="async"><div class="media-top"><span class="tag">${esc(v.category)}</span><span class="tag">${esc(v.quality)}</span></div><button class="play" type="button" aria-label="Open ${esc(v.title)}">▶</button><div class="media-bottom"><span>OPEN · MEDIA PAGE</span><span>${esc(v.duration ? time(v.duration) : '—')}</span></div></div><div class="card-info"><div class="small-row"><span>${esc(v.subtitle)}</span><span>${esc(v.source || 'DIRECT')}</span></div><h3>${esc(v.title)}</h3><p>${esc(v.description)}</p><div class="card-actions"><button class="play-inline" type="button">OPEN PAGE</button></div></div>`;
+    const open = () => { location.href = `/video/${encodeURIComponent(v.id)}`; };
+    wrap.querySelector('.card-media').addEventListener('click', open);
+    wrap.querySelector('.card-media').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    wrap.querySelector('.play').addEventListener('click', e => { e.stopPropagation(); open(); });
+    wrap.querySelector('.play-inline').addEventListener('click', e => { e.stopPropagation(); open(); });
+    wrap.addEventListener('pointermove', e => { const r=wrap.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height; wrap.style.setProperty('--rx',`${((.5-y)*4).toFixed(2)}deg`); wrap.style.setProperty('--ry',`${((x-.5)*4).toFixed(2)}deg`); wrap.style.setProperty('--gx',`${(x*100).toFixed(0)}%`); wrap.style.setProperty('--gy',`${(y*100).toFixed(0)}%`); });
+    wrap.addEventListener('pointerleave', () => { wrap.style.setProperty('--rx','0deg'); wrap.style.setProperty('--ry','0deg'); });
+    return wrap;
   }
-  function attachCardFX(card,v){
-    card.addEventListener('pointermove',e=>{const r=card.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;card.style.setProperty('--rx',`${((.5-y)*4.5).toFixed(2)}deg`);card.style.setProperty('--ry',`${((x-.5)*5).toFixed(2)}deg`);card.style.setProperty('--gx',`${(x*100).toFixed(0)}%`);card.style.setProperty('--gy',`${(y*100).toFixed(0)}%`)});
-    card.addEventListener('pointerleave',()=>{card.style.setProperty('--rx','0deg');card.style.setProperty('--ry','0deg')});
-    card.addEventListener('click',e=>{if(!e.target.closest('a'))openPlayer(v)});
-    const vid=card.querySelector('.card-video');
-    if(vid){card.addEventListener('mouseenter',()=>{vid.currentTime=.05;card.classList.add('playing');vid.play().catch(()=>{})});card.addEventListener('mouseleave',()=>{vid.pause();try{vid.currentTime=.05}catch{}card.classList.remove('playing')})}
+
+  async function loadPage(reset = false) {
+    if (state.loading || (!state.hasMore && !reset)) return;
+    if (reset) { state.page=0; state.hasMore=true; grid.innerHTML=''; empty.classList.add('hidden'); }
+    state.loading=true; loading.hidden=false; loading.textContent='LOADING MEDIA...';
+    try {
+      const next = state.page + 1;
+      const url = new URL('/api/videos', location.origin); url.searchParams.set('page', next); url.searchParams.set('limit', state.limit); if (state.query) url.searchParams.set('q', state.query);
+      const r = await fetch(url, { cache:'no-store' }); if (!r.ok) throw new Error('library');
+      const data = await r.json(); state.page=data.page; state.total=data.total; state.hasMore=data.hasMore;
+      count.textContent=String(data.total).padStart(2,'0'); heroCount.textContent=String(data.total).padStart(2,'0');
+      if (!data.items.length && state.page===1) empty.classList.remove('hidden');
+      data.items.forEach((v,idx) => grid.appendChild(makeCard(v, idx)));
+      loadMore.hidden = !state.hasMore || !data.items.length; loading.hidden=true;
+    } catch { loading.hidden=false; loading.textContent='LIBRARY REQUEST FAILED'; }
+    finally { state.loading=false; }
   }
-  function render(){
-    const items=filtered(); count.textContent=String(items.length).padStart(2,'0'); heroCount.textContent=String(state.items.length).padStart(2,'0'); empty.classList.toggle('hidden',items.length!==0);
-    grid.innerHTML=items.map((v,i)=>`<article class="media-card" data-id="${esc(v.id)}" style="--i:${i}"><div class="card-media"><img class="poster" src="${esc(v.poster||'./assets/hero.jpg')}" alt="" loading="lazy"><span class="scan"></span><video class="card-video" muted playsinline loop preload="metadata" crossorigin="anonymous" src="${esc(v.videoUrl)}"></video><div class="media-top"><span class="tag">${esc(v.category)}</span><span class="tag">${esc(v.quality)}</span></div><button class="play" aria-label="Play ${esc(v.title)}">▶</button><div class="media-bottom"><span>FRAME · 01.0S</span><span class="duration" data-duration="${esc(v.id)}">--:--</span></div></div><div class="card-info"><div class="small-row"><span>${esc(v.subtitle)}</span><span>${esc(v.source||'DIRECT')}</span></div><h3>${esc(v.title)}</h3><p>${esc(v.description)}</p><div class="card-actions"><button class="play-inline">PLAY</button><a href="${esc(v.downloadUrl||v.videoUrl)}" download>DOWNLOAD ↗</a></div></div></article>`).join('');
-    [...grid.querySelectorAll('.media-card')].forEach(card=>{const v=state.items.find(x=>x.id===card.dataset.id);makeFirstSecondThumb(v,card.querySelector('.poster'));attachCardFX(card,v);const duration=card.querySelector('.duration');const temp=card.querySelector('.card-video');temp.addEventListener('loadedmetadata',()=>duration.textContent=time(temp.duration));card.querySelector('.play').onclick=e=>{e.stopPropagation();openPlayer(v)};card.querySelector('.play-inline').onclick=e=>{e.stopPropagation();openPlayer(v)};});
-  }
-  function openPlayer(v){player.classList.add('open');player.setAttribute('aria-hidden','false');playerTitle.textContent=v.title;playerMeta.textContent=`${v.category} // ${v.quality} // DIRECT`;playerDownload.href=v.downloadUrl||v.videoUrl;playerVideo.src=v.videoUrl;playerVideo.poster=state.thumbs.get(v.id)&&state.thumbs.get(v.id)!=='pending'?state.thumbs.get(v.id):(v.poster||'');playerVideo.load();playerVideo.play().catch(()=>{});}
-  function closePlayer(){player.classList.remove('open');player.setAttribute('aria-hidden','true');playerVideo.pause();playerVideo.removeAttribute('src');playerVideo.load()}
-  function syncSearch(value){state.query=value;searchInput.value=value;searchModalInput.value=value;render()}
-  $('#playerClose').onclick=closePlayer;$('.player-backdrop').onclick=closePlayer;const openPrivate=()=>{location.href='/_c9'};
-  const privateShortcut=e=>{const nine=e.code==='Digit9'||e.code==='Numpad9'||e.key==='9'||e.key===')'; if(e.ctrlKey&&e.shiftKey&&nine){e.preventDefault();e.stopImmediatePropagation();openPrivate();}};
-  window.addEventListener('keydown',e=>{if(e.key==='Escape'){closePlayer();searchModal.classList.remove('open');} privateShortcut(e)},true);
-  window.addEventListener('keyup',privateShortcut,true);
-  searchInput.addEventListener('input',e=>syncSearch(e.target.value));searchModalInput.addEventListener('input',e=>syncSearch(e.target.value));
-  $('#searchButton').onclick=()=>{searchModal.classList.add('open');searchModal.setAttribute('aria-hidden','false');searchModalInput.focus();searchModalInput.value=state.query};$('#searchClose').onclick=()=>searchModal.classList.remove('open');
-  function setMusic(){const on=!theme.paused;document.body.classList.toggle('music-on',on);musicMain.textContent=on?'Ⅱ':'▶';musicButton.textContent=on?'Ⅱ':'♫'}
+
+  const applySearch = v => { state.query=v.trim(); searchInput.value=v; searchModalInput.value=v; clearTimeout(state.searchTimer); state.searchTimer=setTimeout(()=>loadPage(true),260); };
+  searchInput.addEventListener('input', e => applySearch(e.target.value));
+  searchModalInput.addEventListener('input', e => applySearch(e.target.value));
+  loadMore.addEventListener('click', () => loadPage(false));
+  $('#searchButton').onclick=()=>{ searchModal.classList.add('open'); searchModal.setAttribute('aria-hidden','false'); searchModalInput.focus(); };
+  $('#searchClose').onclick=()=>searchModal.classList.remove('open');
+  window.addEventListener('keydown',e=>{if(e.key==='Escape')searchModal.classList.remove('open');});
+
+  function setMusic(){const on=!theme.paused;musicMain.textContent=on?'Ⅱ':'▶';musicButton.textContent=on?'Ⅱ':'♫';document.body.classList.toggle('music-on',on);}
   async function toggleMusic(){try{if(theme.paused)await theme.play();else theme.pause();setMusic()}catch{setMusic()}}
-  musicButton.onclick=toggleMusic;musicMain.onclick=toggleMusic;$('#heroMusic').onclick=toggleMusic;theme.addEventListener('timeupdate',()=>musicTime.textContent=time(theme.currentTime));
-  // Cursor light: both elements are driven by the same viewport CSS variables, so they cannot drift apart.
-  if(matchMedia('(pointer:fine)').matches){
-    const root=document.documentElement;
-    const glow=$('.cursor-glow'),dot=$('.cursor-dot');
-    const moveCursor=e=>{
-      const x=Math.round(e.clientX), y=Math.round(e.clientY);
-      root.style.setProperty('--cursor-x',`${x}px`);
-      root.style.setProperty('--cursor-y',`${y}px`);
-      root.style.setProperty('--mx',`${(x/innerWidth-.5)*2}`);
-      root.style.setProperty('--my',`${(y/innerHeight-.5)*2}`);
-      glow.classList.add('cursor-visible');
-      dot.classList.add('cursor-visible');
-    };
-    window.addEventListener('pointermove',moveCursor,{passive:true});
-    window.addEventListener('pointerenter',moveCursor,{passive:true});
-    window.addEventListener('pointerleave',()=>{
-      glow.classList.remove('cursor-visible');
-      dot.classList.remove('cursor-visible');
-    },{passive:true});
-  }
-  async function boot(){
-    try{const r=await fetch('/api/videos',{cache:'no-store'}); if(!r.ok) throw new Error('api'); const data=await r.json(); if(Array.isArray(data)&&data.length){state.items=data;} }catch{} render();
-  }
-  boot();
+  musicButton.onclick=toggleMusic; musicMain.onclick=toggleMusic; $('#heroMusic').onclick=toggleMusic; theme.addEventListener('timeupdate',()=>musicTime.textContent=time(theme.currentTime));
+
+  if(matchMedia('(pointer:fine)').matches){const root=document.documentElement,glow=$('.cursor-glow'),dot=$('.cursor-dot');const move=e=>{const x=Math.round(e.clientX),y=Math.round(e.clientY);root.style.setProperty('--cursor-x',`${x}px`);root.style.setProperty('--cursor-y',`${y}px`);root.style.setProperty('--mx',`${(x/innerWidth-.5)*2}`);root.style.setProperty('--my',`${(y/innerHeight-.5)*2}`);glow.classList.add('cursor-visible');dot.classList.add('cursor-visible')};window.addEventListener('pointermove',move,{passive:true});window.addEventListener('pointerenter',move,{passive:true});window.addEventListener('pointerleave',()=>{glow.classList.remove('cursor-visible');dot.classList.remove('cursor-visible')},{passive:true});}
+
+  loadPage(true);
 })();
